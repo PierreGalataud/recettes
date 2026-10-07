@@ -64,6 +64,14 @@ h1{font:800 clamp(2.5rem,7vw,5rem)/.95 var(--titre); letter-spacing:-.035em; mar
 .resultats .ok{font-size:.88rem; color:#3F6B2A}
 .rien{color:var(--gris); margin:16px 0 0}
 
+.envie{border:0; padding:0; margin:14px 0 0; display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.envie legend{float:left; font-weight:600; font-size:.95rem; margin-right:4px}
+.envie label{cursor:pointer}
+.envie input{position:absolute; opacity:0; width:1px; height:1px}
+.envie label span,.envie label{display:inline-block}
+.envie label{padding:6px 14px; border:2px solid var(--encre); border-radius:999px; font-size:.92rem; font-weight:600; background:var(--carte)}
+.envie label:has(input:checked){background:var(--encre); color:var(--carte); text-decoration:line-through}
+.envie label:has(input:focus-visible){outline:3px solid var(--moutarde); outline-offset:2px}
 .go{display:block; width:100%; margin:14px 0 0; padding:15px; border:0; border-radius:16px; background:var(--tomate); color:#fff; font:800 1.15rem var(--titre); cursor:pointer}
 .go:hover{filter:brightness(1.08)}
 .reset{margin:16px 0 0; padding:10px 18px; border:2px solid var(--encre); border-radius:999px; background:var(--carte); color:var(--encre); font:700 1rem var(--titre); cursor:pointer}
@@ -127,12 +135,18 @@ footer{padding:30px 0 90px; color:var(--gris); font-size:.9rem}
     <p class="aide">Ouvre le frigo et dicte ce que tu vois, en une ou plusieurs fois. Touche une étiquette pour la retirer, puis lance la recherche.</p>
     <label for="frigo-saisie" class="meta" hidden>Ingrédients disponibles</label>
     <div class="saisie">
-    <input id="frigo-saisie" type="text" enterkeyhint="done" placeholder="courgette, pâtes, jambon…" autocomplete="off" autocapitalize="none">
-    <button type="button" class="ajouter" id="frigo-ajouter">Ajouter</button>
+    <input id="frigo-saisie" type="text" enterkeyhint="search" placeholder="courgette, pâtes, jambon…" autocomplete="off" autocapitalize="none">
     <button type="button" class="micro" id="frigo-micro" aria-pressed="false" aria-label="Dicter mes ingrédients"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
     </div>
     <p class="micro-msg" id="frigo-micro-msg" hidden></p>
     <ul class="puces" id="frigo-puces" aria-live="polite"></ul>
+    <fieldset class="envie">
+      <legend>Pas envie de :</legend>
+      <label><input type="checkbox" value="pates"> Pâtes</label>
+      <label><input type="checkbox" value="riz"> Riz</label>
+      <label><input type="checkbox" value="viande"> Viande</label>
+      <label><input type="checkbox" value="poisson"> Poisson</label>
+    </fieldset>
     <div class="options">
       <label><input type="checkbox" id="frigo-healthy"> Healthy uniquement</label>
       <label><input type="checkbox" id="frigo-bases" checked> J’ai toujours oignon, ail, beurre, farine et sucre</label>
@@ -340,7 +354,9 @@ function analyser(texte){
 const zSaisie=document.getElementById("frigo-saisie"), zBases=document.getElementById("frigo-bases"),
       zPuces=document.getElementById("frigo-puces"), zRes=document.getElementById("frigo-resultats"),
       zMsg=document.getElementById("frigo-micro-msg");
-let FRIGO=[]; // alias normalisés, vidé après chaque recherche
+let FRIGO=[]; // alias normalisés, vidé par le bouton de reset ou au rechargement
+zSaisie.value="";
+try{localStorage.removeItem("frigo");localStorage.removeItem("frigo-v2")}catch(e){}
 const zHealthy=document.getElementById("frigo-healthy");
 try{zBases.checked=localStorage.getItem("frigo-bases")!=="0";zHealthy.checked=localStorage.getItem("frigo-healthy")==="1"}catch(e){}
 function nomCle(k){return ING[k].singulier}
@@ -354,36 +370,42 @@ function ajouter(texte){
 function afficherPuces(){
   zPuces.innerHTML=FRIGO.map((a,i)=>`<li><button type="button" data-i="${i}" aria-label="Retirer ${etiquette(a)}">${etiquette(a)}</button></li>`).join("");
 }
-function chercher(){
+const EXCLU={pates:["pates","nouilles","gnocchis"],riz:["riz"],
+  viande:["poulet","cuisse_poulet","escalope","boeuf_hache","steak_hache","boeuf_emince","cote_porc","lardons","jambon","saucisse","chorizo"],
+  poisson:["thon","saumon","saumon_fume","crevettes","colin","moules","sardines"]};
+const zEnvie=[...document.querySelectorAll(".envie input")];
+function chercher(defiler=true){
   if(zSaisie.value.trim()){ajouter(zSaisie.value);zSaisie.value=""}
   if(!FRIGO.length){zMsg.textContent="Dicte ou écris au moins un ingrédient.";zMsg.hidden=false;return}
   try{localStorage.setItem("frigo-bases",zBases.checked?"1":"0");localStorage.setItem("frigo-healthy",zHealthy.checked?"1":"0")}catch(e){}
   const dispo=new Set(); FRIGO.forEach(a=>ALIAS.get(a).forEach(k=>dispo.add(k)));
   const bases=zBases.checked?new Set(BASES):new Set();
+  const exclues=new Set(zEnvie.filter(c=>c.checked).flatMap(c=>EXCLU[c.value]));
   const groupes=[[],[],[]];
   for(const x of R){
     if(zHealthy.checked&&!x.healthy)continue;
+    if(x.ing.some(i=>exclues.has(i.cle)))continue;
     const req=[...new Set(x.ing.map(i=>i.cle))].filter(k=>!ING[k].toujoursDispo&&!bases.has(k));
     const utilise=req.filter(k=>dispo.has(k)), manque=req.filter(k=>!dispo.has(k));
     if(utilise.length&&manque.length<=2) groupes[manque.length].push({x,utilise,manque});
   }
   groupes.forEach(g=>g.sort((a,b)=>b.utilise.length-a.utilise.length));
   const titres=["Tu peux faire","Il te manque 1 ingrédient","Il te manque 2 ingrédients"];
-  const recap=`<p class="recap">Avec : ${FRIGO.map(etiquette).join(", ")}${zHealthy.checked?" · healthy uniquement":""}</p>`;
+  const recap=`<p class="recap">Avec : ${FRIGO.map(etiquette).join(", ")}${zHealthy.checked?" · healthy uniquement":""}${zEnvie.some(c=>c.checked)?" · sans "+zEnvie.filter(c=>c.checked).map(c=>c.parentNode.textContent.trim().toLowerCase()).join(", "):""}</p>`;
   const html=groupes.map((g,n)=>g.length?`<h3>${titres[n]} <small>${g.length} recette${g.length>1?"s":""}</small></h3><ul>${
     g.map(({x,manque})=>`<li><a href="#${x.id}">${dessin(x,"f-"+x.id)}<span><strong>${x.nom}</strong>${
       manque.length?`<span class="manque">Manque : ${manque.map(nomCle).join(", ")}</span>`:`<span class="ok">Tout est là, ${fmtTemps(x.temps)}</span>`}</span></a></li>`).join("")}</ul>`:"").join("");
   const reset=`<button type="button" class="reset" id="frigo-reset">Nouvelle fouille du frigo</button>`;
   zRes.innerHTML=reset+recap+(html||`<p class="rien">Aucune recette à moins de 2 ingrédients près${zHealthy.checked?" en healthy":""}.</p>`);
-  FRIGO=[]; zMsg.hidden=true; afficherPuces();
-  zRes.scrollIntoView({behavior:"smooth",block:"start"});
+  zMsg.hidden=true;
+  if(defiler)zRes.scrollIntoView({behavior:"smooth",block:"start"});
 }
 const valider=()=>{if(zSaisie.value.trim()){ajouter(zSaisie.value);zSaisie.value=""}};
-document.getElementById("frigo-ajouter").addEventListener("click",()=>{valider();zSaisie.focus()});
-document.getElementById("frigo-go").addEventListener("click",chercher);
-zSaisie.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();valider()}});
+document.getElementById("frigo-go").addEventListener("click",()=>chercher());
+[...zEnvie,zHealthy,zBases].forEach(c=>c.addEventListener("change",()=>{if(zRes.innerHTML&&FRIGO.length)chercher(false)}));
+zSaisie.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();zSaisie.blur();chercher()}});
 zRes.addEventListener("click",e=>{if(!e.target.closest("#frigo-reset"))return;zRes.innerHTML="";FRIGO=[];zSaisie.value="";zMsg.hidden=true;afficherPuces();document.querySelector(".frigo").scrollIntoView({behavior:"smooth",block:"start"});zSaisie.focus({preventScroll:true})});
-zPuces.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;FRIGO.splice(+b.dataset.i,1);afficherPuces()});
+zPuces.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;FRIGO.splice(+b.dataset.i,1);afficherPuces();if(zRes.innerHTML){if(FRIGO.length)chercher(false);else zRes.innerHTML=""}});
 
 /* ---------- Dictée ---------- */
 (()=>{
