@@ -2,7 +2,7 @@
 
 Un petit livre de recettes du quotidien en une seule page HTML, avec un module « Mon frigo » : tu dictes ce que tu as, il te propose les recettes faisables.
 
-Projet perso, sans framework, sans backend, sans dépendance.
+Projet perso, sans framework, sans backend, sans dépendance, juste pour avoir des idées de recette
 
 ## Fonctionnalités
 
