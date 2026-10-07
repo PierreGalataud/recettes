@@ -9,8 +9,12 @@ Projet perso, sans framework, sans backend, sans dépendance.
 - **110 recettes simples** (6 ingrédients max hors placard), classées en pâtes & riz, viandes, poissons, œufs & légumes, desserts.
 - **Index visuel** avec recherche par nom ou ingrédient (taper `healthy` filtre les recettes healthy).
 - **Portions ajustables** : les quantités se recalculent.
-- **Mon frigo** : dictée ou saisie des ingrédients, puis « On mange quoi ? » affiche les recettes faisables, celles où il manque 1 ingrédient, puis 2.
-- **Option healthy** pour ne garder que les recettes légères.
+- **Mon frigo** :
+  - dicte (micro) ou tape tes ingrédients, en une ou plusieurs fois : ils deviennent des étiquettes ;
+  - « On mange quoi ? » (ou Entrée) lance la recherche : recettes faisables, puis celles où il manque 1 ou 2 ingrédients ;
+  - filtres **Pas envie de** (pâtes, riz, viande, poisson) et **Healthy uniquement** ;
+  - retirer une étiquette ou changer un filtre met les résultats à jour aussitôt ;
+  - « Nouvelle fouille du frigo » remet tout à zéro (un rechargement de page aussi).
 - Illustrations dessinées en SVG dans la page : rien à charger à part les polices.
 
 ## Utilisation
